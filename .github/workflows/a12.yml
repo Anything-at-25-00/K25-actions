@@ -26,7 +26,7 @@ jobs:
       
       - name: Cloning Repo
         run: |
-          git clone https://github.com/Anything-at-25:00/android_kernel_samsung_a127x -b $branch
+          git clone https://github.com/Anything-at-25:00/android_kernel_samsung_a127x -b ${{ inputs.branch }}
           
       - name: Preparing Toolchain
         run: |
