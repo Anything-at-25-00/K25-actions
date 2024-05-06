@@ -1,0 +1,77 @@
+
+name: A127x Workflow
+
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      branch:
+        description: 'Branch to build'
+        default: 'android-4.19-stable'
+        required: true
+        type: string
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Prepare Environment
+        run: |
+         export ANDROID_MAJOR_VERSION=t && export PLATFORM_VERSION=13
+         sudo apt-get update
+         sudo apt-get full-upgrade -y
+         sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-mult>
+         sudo apt-get install -y git zip unzip cpio wget
+      
+      - name: Cloning Repo
+        run: |
+          git clone https://github.com/Anything-at-25:00/android_kernel_samsung_a127x -b $branch
+          
+      - name: Preparing Toolchain
+        run: |
+          mkdir -p android_kernel_samsung_a127x/toolchain/gcc/linux-x86/aarch64/
+          mkdir -p android_kernel_samsung_a127x/toolchain/clang/host/linux-x86/clang-r353983c/
+          wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/emu-29.0-release/clang-r353983c.tar.gz
+          tar zxvf clang-r353983c.tar.gz --directory android_kernel_samsung_a127x/toolchain/clang/host/linux-x86/clang-r353983c
+          git clone https://github.com/GrowtopiaJaw/aarch64-linux-android-4.9.git -b google --single-branch android_kernel_samsung_a127x/toolchain/gcc/linux-x86/aarch64/aarch64-linux-android-4.9
+          
+      - name: KernelSU
+        run: |
+           cd android_kernel_samsung_a127x && curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash - && cd ..
+         
+      - name: Building
+        run: |
+           cd android_kernel_samsung_a127x && make -C $(pwd) O=$(pwd)/out KCFLAGS=-w CONFIG_SECTION_MISMATCH_WARN_ONLY=y exynos850-a12snsxx_defconfig && make -C $(pwd) O=$(pwd)/out KCFLAGS=-w CONFIG_SECTION_MISMATCH_WARN_ONLY=y && cd ..
+          
+      - name: Checking if Image(.gz) exists
+        run: |
+           if ! [[ -f "android_kernel_samsung_a127x/out/arch/arm64/boot/Image" ]]; then
+              exit 1
+           fi
+           
+      - name: Pack up into flashable .zip
+        run: |
+            git clone https://github.com/Anything-at-25-00/AnyKernel3 -b a127x-base
+            cp android_kernel_samsung_a127x/out/arch/arm64/boot/Image AnyKernel3/
+            cd AnyKernel3 && zip -r9 K25-A127x-mafuyu.zip AnyKernel3/* -x .git README.md *placeholder && cd ..
+        
+      - name: Upload to monofile and send to telegram
+        run: |
+             wget https://raw.githubusercontent.com/Anything-at-25-00/monofile-upload/main/monofile-upload.sh
+             
+             chmod +x monofile-upload.sh
+             buildUrl="$(./monofile-upload.sh AnyKernel3/K25-A127x-mafuyu.zip)"
+             
+             wget https://pfile.glitch.me/a127x_banner
+             
+             BOT_TOKEN="${{ secrets.TELEGRAM_TOKEN }}"
+             CHAT_ID="@kernelat25"
+             IMAGE_PATH="./a127x_banner"
+             CAPTION_TEXT="New build!/nKernel at 25:00 by @kernelat25/nA127x-mafuyu/n/n/n$buildUrl"
+
+             curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto" \
+                 -F chat_id="${CHAT_ID}" \
+                 -F photo="@${IMAGE_PATH}" \
+                 -F caption="${CAPTION_TEXT}"
