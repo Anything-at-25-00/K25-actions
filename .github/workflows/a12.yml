@@ -21,7 +21,7 @@ jobs:
          export ANDROID_MAJOR_VERSION=t && export PLATFORM_VERSION=13
          sudo apt-get update
          sudo apt-get full-upgrade -y
-         sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-mult>
+         sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multi
          sudo apt-get install -y git zip unzip cpio wget
       
       - name: Cloning Repo
